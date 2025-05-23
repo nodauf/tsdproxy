@@ -128,7 +128,8 @@ func (proxy *Proxy) initPorts() error {
 	var newPort *port
 	for k, v := range proxy.Config.Ports {
 		log := proxy.log.With().Str("port", k).Logger()
-		if v.ProxyProtocol == "tcp" {
+		switch {
+		case v.ProxyProtocol == "tcp":
 			target := strings.Split(proxy.providerProxy.GetURL(), "/")[2]
 			backend, err := net.ResolveTCPAddr("tcp", target+":"+strconv.Itoa(v.TargetPort))
 			if err != nil {
@@ -144,12 +145,10 @@ func (proxy *Proxy) initPorts() error {
 				ctx:      ctxPort,
 				cancel:   cancel,
 			}
-		} else {
-			if v.IsRedirect {
-				newPort = newPortRedirect(proxy.ctx, v, log)
-			} else {
-				newPort = newPortProxy(proxy.ctx, v, log, proxy.Config.ProxyAccessLog, proxy.ProviderUserMiddleware)
-			}
+		case v.IsRedirect:
+			newPort = newPortRedirect(proxy.ctx, v, log)
+		default:
+			newPort = newPortProxy(proxy.ctx, v, log, proxy.Config.ProxyAccessLog, proxy.ProviderUserMiddleware)
 		}
 
 		proxy.log.Debug().Any("port", newPort).Msg("newport")
