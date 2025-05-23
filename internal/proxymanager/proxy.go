@@ -10,8 +10,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/almeidapaulopt/tsdproxy/internal/model"
@@ -72,7 +70,7 @@ func NewProxy(log zerolog.Logger,
 		ports:         make(map[string]*port),
 	}
 
-	err = p.initPorts()
+	p.initPorts()
 
 	return p, err
 }
@@ -124,29 +122,22 @@ func (proxy *Proxy) ProviderUserMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (proxy *Proxy) initPorts() error {
+func (proxy *Proxy) initPorts() {
 	var newPort *port
+	var err error
 	for k, v := range proxy.Config.Ports {
 		log := proxy.log.With().Str("port", k).Logger()
 		switch {
 		case v.ProxyProtocol == "tcp":
-			target := strings.Split(proxy.providerProxy.GetURL(), "/")[2]
-			backend, err := net.ResolveTCPAddr("tcp", target+":"+strconv.Itoa(v.TargetPort))
+			newPort, err = newPortTCP(proxy.ctx, v, log)
 			if err != nil {
-				return fmt.Errorf("error resolving address to ResolveTCPAddr: %w", err)
+				log.Error().Err(err).Msg("error creating TCP port")
+				continue
 			}
 
-			newTCPProxy := NewTCPProxy(backend)
-
-			ctxPort, cancel := context.WithCancel(proxy.ctx)
-			newPort = &port{
-				TCPProxy: newTCPProxy,
-				log:      log,
-				ctx:      ctxPort,
-				cancel:   cancel,
-			}
 		case v.IsRedirect:
 			newPort = newPortRedirect(proxy.ctx, v, log)
+
 		default:
 			newPort = newPortProxy(proxy.ctx, v, log, proxy.Config.ProxyAccessLog, proxy.ProviderUserMiddleware)
 		}
@@ -157,7 +148,6 @@ func (proxy *Proxy) initPorts() error {
 		proxy.ports[k] = newPort
 		proxy.mtx.Unlock()
 	}
-	return nil
 }
 
 // Start method is a method that starts the proxy.

@@ -16,6 +16,7 @@ import (
 	"github.com/almeidapaulopt/tsdproxy/internal/consts"
 	"github.com/almeidapaulopt/tsdproxy/internal/core"
 	"github.com/almeidapaulopt/tsdproxy/internal/model"
+
 	"github.com/rs/zerolog"
 )
 
@@ -102,6 +103,23 @@ func newPortRedirect(ctx context.Context, pconfig model.PortConfig, log zerolog.
 		cancel:     cancel,
 		httpServer: redirectHTTPServer,
 	}
+}
+
+func newPortTCP(ctx context.Context, pconfig model.PortConfig, log zerolog.Logger) (*port, error) {
+	backend, err := net.ResolveTCPAddr("tcp", pconfig.GetFirstTarget().String())
+	if err != nil {
+		return nil, fmt.Errorf("error resolving address to ResolveTCPAddr: %w", err)
+	}
+
+	newTCPProxy := NewTCPProxy(backend)
+
+	ctxPort, cancel := context.WithCancel(ctx)
+	return &port{
+		TCPProxy: newTCPProxy,
+		log:      log,
+		ctx:      ctxPort,
+		cancel:   cancel,
+	}, nil
 }
 
 func (p *port) startWithListener(l net.Listener) error {

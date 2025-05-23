@@ -17,7 +17,6 @@ type (
 		ProxyProtocol string `validate:"string" yaml:"proxyProtocol"`
 		targets       []*url.URL
 		ProxyPort     int           `validate:"hostname_port" yaml:"proxyPort"`
-		TargetPort    int           `validate:"integer" yaml:"targetPort"`
 		TLSValidate   bool          `validate:"boolean" yaml:"tlsValidate"`
 		IsRedirect    bool          `validate:"boolean" yaml:"isRedirect"`
 		Tailscale     TailscalePort `validate:"dive" yaml:"tailscale"`
@@ -168,12 +167,7 @@ func parseTargetSegment(segment string, config *PortConfig) error {
 		return fmt.Errorf("error to parse url: %w", err)
 	}
 
-	port, err := strconv.Atoi(targetParts[0])
-	if err != nil {
-		return fmt.Errorf("error to parse port: %w", err)
-	}
 	config.targets = []*url.URL{urlParsed}
-	config.TargetPort = port
 	return nil
 }
 
