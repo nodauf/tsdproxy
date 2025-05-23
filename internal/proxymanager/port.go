@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"sync"
+	"strings"
 
 	"github.com/almeidapaulopt/tsdproxy/internal/consts"
 	"github.com/almeidapaulopt/tsdproxy/internal/core"
@@ -106,7 +107,8 @@ func newPortRedirect(ctx context.Context, pconfig model.PortConfig, log zerolog.
 }
 
 func newPortTCP(ctx context.Context, pconfig model.PortConfig, log zerolog.Logger) (*port, error) {
-	backend, err := net.ResolveTCPAddr("tcp", pconfig.GetFirstTarget().String())
+	targetAddressWithPort := strings.Split(pconfig.GetFirstTarget().String(),"/")[1]
+	backend, err := net.ResolveTCPAddr("tcp", targetAddressWithPort)
 	if err != nil {
 		return nil, fmt.Errorf("error resolving address to ResolveTCPAddr: %w", err)
 	}
